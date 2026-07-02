@@ -10,7 +10,8 @@ import ExcelJS from 'exceljs';
  */
 export async function exportToExcel(selectedMonth, weeks, startingMileage, endingMileage, riders) {
   // 1. Fetch the original template as an array buffer
-  const response = await fetch('/ABS05 - I. Nguyen 7.1.26.xlsx');
+  const baseUrl = import.meta.env.BASE_URL || '/';
+  const response = await fetch(`${baseUrl}ABS05 - I. Nguyen 7.1.26.xlsx`);
   if (!response.ok) {
     throw new Error('Failed to load the spreadsheet template.');
   }
