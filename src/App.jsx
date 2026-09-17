@@ -17,13 +17,14 @@ import { exportToExcel } from './excelExporter';
 const RIDERS = [
   "Isabel Nguyen",
   "Heiddy Rocha",
+  "Justin Kettle",
   "Luke Mendelsohn",
   "Andrea Dixon",
   "Thomas Keene",
   "Christopher Beavers"
 ];
 
-const DEFAULT_DRIVERS = ["Luke Mendelsohn", "Christopher Beavers"];
+const DEFAULT_DRIVERS = ["Justin Kettle", "Thomas Keene", "Christopher Beavers", "Luke Mendelsohn"];
 
 export default function App() {
   const [selectedMonth, setSelectedMonth] = useState(new Date(2026, 6, 1)); // Default: July 2026
@@ -103,7 +104,7 @@ export default function App() {
     // 2. Set default driver rotations and base ridership
     activeDays.forEach((day, idx) => {
       const dayObj = updatedWeeks[day.wIdx][day.dIdx];
-      // Alternate drivers: Luke drives on even active days, Chris on odd active days
+      // Rotate among the configured drivers
       const primaryDriver = DEFAULT_DRIVERS[idx % DEFAULT_DRIVERS.length];
       
       dayObj.driverAm = primaryDriver;
@@ -117,21 +118,7 @@ export default function App() {
       });
     });
 
-    // 3. Heidi is out Mondays and Fridays by default
-    activeDays.forEach(day => {
-      const dayObj = updatedWeeks[day.wIdx][day.dIdx];
-      const dVal = new Date(dayObj.date);
-      const dayOfWeek = dVal.getDay(); // 1 = Monday, 5 = Friday
-      
-      if (dayOfWeek === 1 || dayOfWeek === 5) {
-        if (dayObj.riders["Heiddy Rocha"]) {
-          dayObj.riders["Heiddy Rocha"].am = 'X';
-          dayObj.riders["Heiddy Rocha"].pm = 'X';
-        }
-      }
-    });
-
-    // 4. Seeding random absences: everyone out 1-2 days a month
+    // 3. Seeding random absences: everyone out 1-2 days a month
     RIDERS.forEach(rider => {
       // Absences: 1 or 2 days
       const absenceCount = Math.floor(Math.random() * 2) + 1;
@@ -193,7 +180,7 @@ export default function App() {
 
     const seeded = runSeedingAlgorithm(initializedWeeks);
     setWeeks(seeded);
-    showToast("Ridership randomly seeded! Heidi is out Mon/Fri, others are out 1-2 days.");
+    showToast("Ridership randomly seeded! All riders are scheduled weekdays, with 1-2 random absences.");
   };
 
   // Get count of active commute days in current state
@@ -539,7 +526,7 @@ export default function App() {
                       value={day.driverAm}
                       onChange={(e) => handleDriverChange(activeWeekIdx, dIdx, 'am', e.target.value)}
                     >
-                      {RIDERS.map((r, rIdx) => (
+                      {DEFAULT_DRIVERS.map((r, rIdx) => (
                         <option key={rIdx} value={r}>{r.split(' ')[0]}</option>
                       ))}
                     </select>
@@ -584,7 +571,7 @@ export default function App() {
                       value={day.driverPm}
                       onChange={(e) => handleDriverChange(activeWeekIdx, dIdx, 'pm', e.target.value)}
                     >
-                      {RIDERS.map((r, rIdx) => (
+                      {DEFAULT_DRIVERS.map((r, rIdx) => (
                         <option key={rIdx} value={r}>{r.split(' ')[0]}</option>
                       ))}
                     </select>
