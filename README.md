@@ -2,10 +2,14 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
+## September 2026 vanpool configuration
+
+Justin Kettle is included in the vanpool. The configured drivers are Justin Kettle, Thomas Keene, Christopher Beavers, and Luke Mendelsohn. Heiddy Rocha is scheduled for all five weekdays rather than being excluded on Mondays and Fridays.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/)
 
 ## React Compiler
 
