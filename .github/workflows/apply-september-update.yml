@@ -1,0 +1,84 @@
+name: Apply September vanpool update
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/apply-september-update.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch September roster and schedule
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/App.jsx')
+          text = path.read_text()
+
+          replacements = [
+              (
+                  '  "Heiddy Rocha",\n  "Luke Mendelsohn",',
+                  '  "Heiddy Rocha",\n  "Justin Kettle",\n  "Luke Mendelsohn",'
+              ),
+              (
+                  'const DEFAULT_DRIVERS = ["Luke Mendelsohn", "Christopher Beavers"];',
+                  'const DEFAULT_DRIVERS = ["Justin Kettle", "Thomas Keene", "Christopher Beavers", "Luke Mendelsohn"];'
+              ),
+              (
+                  '// Alternate drivers: Luke drives on even active days, Chris on odd active days',
+                  '// Rotate among the configured drivers'
+              ),
+              (
+                  '''    // 3. Heidi is out Mondays and Fridays by default
+    activeDays.forEach(day => {
+      const dayObj = updatedWeeks[day.wIdx][day.dIdx];
+      const dVal = new Date(dayObj.date);
+      const dayOfWeek = dVal.getDay(); // 1 = Monday, 5 = Friday
+      
+      if (dayOfWeek === 1 || dayOfWeek === 5) {
+        if (dayObj.riders["Heiddy Rocha"]) {
+          dayObj.riders["Heiddy Rocha"].am = 'X';
+          dayObj.riders["Heiddy Rocha"].pm = 'X';
+        }
+      }
+    });
+
+    // 4. Seeding random absences: everyone out 1-2 days a month''',
+                  '''    // 3. Seeding random absences: everyone out 1-2 days a month'''
+              ),
+              (
+                  'showToast("Ridership randomly seeded! Heidi is out Mon/Fri, others are out 1-2 days.");',
+                  'showToast("Ridership randomly seeded! All riders are scheduled weekdays, with 1-2 random absences.");'
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f'Expected source text not found: {old[:80]!r}')
+              text = text.replace(old, new, 1)
+
+          driver_dropdown = '                      {RIDERS.map((r, rIdx) => ('
+          if text.count(driver_dropdown) != 2:
+              raise SystemExit(f'Expected 2 driver dropdown mappings, found {text.count(driver_dropdown)}')
+          text = text.replace(driver_dropdown, '                      {DEFAULT_DRIVERS.map((r, rIdx) => (')
+
+          path.write_text(text)
+
+      - name: Commit update and remove one-time workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.jsx
+          git rm .github/workflows/apply-september-update.yml
+          git commit -m "Update September vanpool roster and schedule"
+          git push
