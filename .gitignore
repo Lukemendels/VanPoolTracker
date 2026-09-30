@@ -27,3 +27,15 @@ dist-ssr
 .venv
 __pycache__/
 *.pyc
+
+# Monthly inputs, generated reports and delivery state must stay private.
+private/
+reports/
+outputs/
+*.manifest.json
+*.sent.json
+*.xlsx
+!ABS05 - I. Nguyen 7.1.26.xlsx
+!public/ABS05 - I. Nguyen 7.1.26.xlsx
+.env
+.env.*
