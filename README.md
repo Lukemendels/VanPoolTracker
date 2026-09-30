@@ -18,3 +18,13 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the Oxlint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+
+## Headless monthly estimated reports
+
+The app and a private Node CLI now share the calendar, roster, driver/absence seeding, mileage calculation, and Excel exporter. See [monthly report setup](docs/monthly-reports.md) for required mileage inputs, private output storage, safe retries, and the three-business-day scheduling contract. No email or cron is enabled by this conversion.
+
+```sh
+npm ci
+npm test
+npm run report -- --help
+```

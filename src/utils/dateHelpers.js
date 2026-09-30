@@ -56,7 +56,7 @@ export function getUSFederalHolidays(year) {
 
   const addHoliday = (date, name) => {
     if (!date) return;
-    const key = date.toISOString().split('T')[0];
+    const key = formatDateKey(date);
     holidays[key] = name;
   };
 
@@ -128,7 +128,7 @@ export function getMonthCalendarWeeks(year, month) {
 
   while (currentDate <= endOfCalendar) {
     const isCurrentMonth = currentDate.getMonth() === month;
-    const dateKey = currentDate.toISOString().split('T')[0];
+    const dateKey = formatDateKey(currentDate);
     const holidayName = holidays[dateKey] || null;
 
     currentWeek.push({
@@ -154,4 +154,36 @@ export function getMonthCalendarWeeks(year, month) {
 export function formatToExcelDate(date) {
   // Return Date object or string
   return date;
+}
+
+// Calendar keys use local civil dates, never UTC conversion (which can shift a
+// midnight date to yesterday in positive-offset time zones).
+export function formatDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+export function parseMonth(month) {
+  if (typeof month !== 'string' || !/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(month)) {
+    throw new Error('month must be YYYY-MM (for example 2026-10).');
+  }
+  return { year: Number(month.slice(0, 4)), month: Number(month.slice(5)) - 1 };
+}
+
+export function isBusinessDay(date) {
+  return !isWeekend(date) && !getUSFederalHolidays(date.getFullYear())[formatDateKey(date)];
+}
+
+// Count backwards strictly before the calendar month's last day. A weekend or
+// holiday month-end is not itself counted. October 2026 therefore yields Oct 28.
+export function getReportSendDate(year, month, businessDaysBefore = 3) {
+  if (!Number.isInteger(businessDaysBefore) || businessDaysBefore < 1) {
+    throw new Error('businessDaysBefore must be a positive integer.');
+  }
+  const date = new Date(year, month + 1, 0);
+  let remaining = businessDaysBefore;
+  while (remaining > 0) {
+    date.setDate(date.getDate() - 1);
+    if (isBusinessDay(date)) remaining--;
+  }
+  return formatDateKey(date);
 }

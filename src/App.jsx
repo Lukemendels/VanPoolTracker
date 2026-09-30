@@ -4,27 +4,13 @@ import {
   Download, 
   RefreshCw, 
   CheckCircle2, 
-  MapPin, 
   TrendingUp, 
-  User, 
-  ShieldAlert, 
-  Check, 
   AlertCircle 
 } from 'lucide-react';
-import { getMonthCalendarWeeks, isWeekend } from './utils/dateHelpers';
+import { RIDERS, DEFAULT_DRIVERS, MILES_PER_COMMUTE_DAY } from './vanpoolConfig.js';
+import { generateEstimatedWeeks, countCommuteDays, calculateEndingMileage } from './reportLogic.js';
 import { exportToExcel } from './excelExporter';
 
-const RIDERS = [
-  "Isabel Nguyen",
-  "Heiddy Rocha",
-  "Justin Kettle",
-  "Luke Mendelsohn",
-  "Andrea Dixon",
-  "Thomas Keene",
-  "Christopher Beavers"
-];
-
-const DEFAULT_DRIVERS = ["Justin Kettle", "Thomas Keene", "Christopher Beavers", "Luke Mendelsohn"];
 
 export default function App() {
   const [selectedMonth, setSelectedMonth] = useState(new Date(2026, 6, 1)); // Default: July 2026
@@ -38,38 +24,7 @@ export default function App() {
 
   // Load calendar structure on month change
   useEffect(() => {
-    const year = selectedMonth.getFullYear();
-    const month = selectedMonth.getMonth();
-    const calendarWeeks = getMonthCalendarWeeks(year, month);
-    
-    // Initialize day options for editing
-    const initializedWeeks = calendarWeeks.map(week => 
-      week.map(day => {
-        const isDayNR = day.isWeekend || day.holiday !== null;
-        
-        // Initialize default rider statuses
-        const ridersStatus = {};
-        RIDERS.forEach(rider => {
-          ridersStatus[rider] = {
-            am: isDayNR ? 'NR' : 'R',
-            pm: isDayNR ? 'NR' : 'R'
-          };
-        });
-
-        return {
-          ...day,
-          isNR: isDayNR,
-          isHoliday: day.holiday !== null,
-          driverAm: isDayNR ? '' : 'Luke Mendelsohn', // Placeholder
-          driverPm: isDayNR ? '' : 'Luke Mendelsohn', // Placeholder
-          riders: ridersStatus
-        };
-      })
-    );
-
-    // Seed the default ridership and driving patterns on initial load
-    const seededWeeks = runSeedingAlgorithm(initializedWeeks);
-    setWeeks(seededWeeks);
+    setWeeks(generateEstimatedWeeks(selectedMonth.getFullYear(), selectedMonth.getMonth()));
     setActiveWeekIdx(0);
   }, [selectedMonth]);
 
@@ -81,123 +36,13 @@ export default function App() {
     }
   }, [toast]);
 
-  // Seeding Algorithm
-  const runSeedingAlgorithm = (weeksData) => {
-    const updatedWeeks = weeksData.map(week =>
-      week.map(day => ({
-        ...day,
-        date: new Date(day.date),
-        riders: JSON.parse(JSON.stringify(day.riders))
-      }))
-    );
-    
-    // 1. Find all active commute weekdays
-    const activeDays = [];
-    updatedWeeks.forEach((week, wIdx) => {
-      week.forEach((day, dIdx) => {
-        if (day.inMonth && !day.isWeekend && !day.isHoliday) {
-          activeDays.push({ wIdx, dIdx });
-        }
-      });
-    });
-
-    // 2. Set default driver rotations and base ridership
-    activeDays.forEach((day, idx) => {
-      const dayObj = updatedWeeks[day.wIdx][day.dIdx];
-      // Rotate among the configured drivers
-      const primaryDriver = DEFAULT_DRIVERS[idx % DEFAULT_DRIVERS.length];
-      
-      dayObj.driverAm = primaryDriver;
-      dayObj.driverPm = primaryDriver;
-
-      RIDERS.forEach(rider => {
-        dayObj.riders[rider] = {
-          am: rider === primaryDriver ? 'D' : 'R',
-          pm: rider === primaryDriver ? 'D' : 'R'
-        };
-      });
-    });
-
-    // 3. Seeding random absences: everyone out 1-2 days a month
-    RIDERS.forEach(rider => {
-      // Absences: 1 or 2 days
-      const absenceCount = Math.floor(Math.random() * 2) + 1;
-      
-      // Shuffle active days list and take first N days
-      const shuffledActiveDays = [...activeDays].sort(() => 0.5 - Math.random());
-      const absenceDays = shuffledActiveDays.slice(0, absenceCount);
-
-      absenceDays.forEach(day => {
-        const dayObj = updatedWeeks[day.wIdx][day.dIdx];
-        
-        dayObj.riders[rider].am = 'X';
-        dayObj.riders[rider].pm = 'X';
-
-        // Backup plan: If this rider was the driver, assign the other driver!
-        if (rider === dayObj.driverAm) {
-          const backupDriver = DEFAULT_DRIVERS.find(d => d !== rider) || "Luke Mendelsohn";
-          dayObj.driverAm = backupDriver;
-          dayObj.riders[backupDriver].am = 'D';
-        }
-        if (rider === dayObj.driverPm) {
-          const backupDriver = DEFAULT_DRIVERS.find(d => d !== rider) || "Luke Mendelsohn";
-          dayObj.driverPm = backupDriver;
-          dayObj.riders[backupDriver].pm = 'D';
-        }
-      });
-    });
-
-    return updatedWeeks;
-  };
-
   const handleSeed = () => {
-    // Generate clean template, then seed it
-    const year = selectedMonth.getFullYear();
-    const month = selectedMonth.getMonth();
-    const calendarWeeks = getMonthCalendarWeeks(year, month);
-    
-    const initializedWeeks = calendarWeeks.map(week => 
-      week.map(day => {
-        const isDayNR = day.isWeekend || day.holiday !== null;
-        const ridersStatus = {};
-        RIDERS.forEach(rider => {
-          ridersStatus[rider] = {
-            am: isDayNR ? 'NR' : 'R',
-            pm: isDayNR ? 'NR' : 'R'
-          };
-        });
-
-        return {
-          ...day,
-          isNR: isDayNR,
-          isHoliday: day.holiday !== null,
-          driverAm: isDayNR ? '' : 'Luke Mendelsohn',
-          driverPm: isDayNR ? '' : 'Luke Mendelsohn',
-          riders: ridersStatus
-        };
-      })
-    );
-
-    const seeded = runSeedingAlgorithm(initializedWeeks);
-    setWeeks(seeded);
+    setWeeks(generateEstimatedWeeks(selectedMonth.getFullYear(), selectedMonth.getMonth()));
     showToast("Ridership randomly seeded! All riders are scheduled weekdays, with 1-2 random absences.");
   };
 
-  // Get count of active commute days in current state
-  const getActiveCommuteDays = () => {
-    let count = 0;
-    weeks.forEach(week => {
-      week.forEach(day => {
-        if (day.inMonth && !day.isNR) {
-          count++;
-        }
-      });
-    });
-    return count;
-  };
-
-  const activeDaysCount = getActiveCommuteDays();
-  const calculatedEndingMileage = startingMileage + activeDaysCount * 90; // 90 miles per active day roundtrip
+  const activeDaysCount = countCommuteDays(weeks);
+  const calculatedEndingMileage = calculateEndingMileage(startingMileage, weeks);
   const finalEndingMileage = isMileageOverridden ? endingMileage : calculatedEndingMileage;
 
   const showToast = (msg) => {
@@ -446,7 +291,7 @@ export default function App() {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
           <span>Active commute days: <strong>{activeDaysCount}</strong></span>
-          <span>Auto-est distance: <strong>{activeDaysCount * 90} miles</strong></span>
+          <span>Auto-est distance: <strong>{activeDaysCount * MILES_PER_COMMUTE_DAY} miles</strong></span>
         </div>
       </section>
 
